@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8">
+  <title>Document</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-sans, sans-serif);
+    }
+
+    .board {
+      padding: 1rem 0;
+    }
+
+    .controls {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 1.25rem;
+      align-items: center;
+    }
+
+    .filter-btn {
+      font-size: 12px;
+      padding: 4px 12px;
+      border-radius: 20px;
+      border: 0.5px solid var(--color-border-secondary);
+      background: transparent;
+      cursor: pointer;
+      color: var(--color-text-secondary);
+      transition: all .15s;
+    }
+
+    .filter-btn.active {
+      background: var(--color-background-info);
+      color: var(--color-text-info);
+      border-color: var(--color-border-info);
+    }
+
+    .filter-btn:hover {
+      background: var(--color-background-secondary);
+    }
+
+    .search {
+      flex: 1;
+      min-width: 160px;
+      font-size: 13px;
+      padding: 5px 10px;
+      border-radius: 6px;
+      border: 0.5px solid var(--color-border-secondary);
+      background: transparent;
+      color: var(--color-text-primary);
+    }
+
+    .sprint-block {
+      margin-bottom: 1.5rem;
+    }
+
+    .sprint-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      border-radius: 8px;
+      background: var(--color-background-secondary);
+      border: 0.5px solid var(--color-border-tertiary);
+      cursor: pointer;
+      margin-bottom: 8px;
+      user-select: none;
+    }
+
+    .sprint-title {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--color-text-primary);
+    }
+
+    .sprint-meta {
+      font-size: 12px;
+      color: var(--color-text-secondary);
+      margin-left: auto;
+    }
+
+    .sprint-toggle {
+      font-size: 11px;
+      color: var(--color-text-tertiary);
+    }
+
+    .tasks-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 8px;
+    }
+
+    .task {
+      border: 0.5px solid var(--color-border-tertiary);
+      border-radius: 8px;
+      padding: 10px 12px;
+      background: var(--color-background-primary);
+      transition: border-color .15s;
+    }
+
+    .task:hover {
+      border-color: var(--color-border-secondary);
+    }
+
+    .task-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+
+    .task-id {
+      font-size: 11px;
+      color: var(--color-text-tertiary);
+      font-family: var(--font-mono, monospace);
+      white-space: nowrap;
+    }
+
+    .task-badges {
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      font-size: 10px;
+      padding: 2px 7px;
+      border-radius: 20px;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    .badge-be {
+      background: var(--color-background-info);
+      color: var(--color-text-info);
+    }
+
+    .badge-fe {
+      background: #EEEDFE;
+      color: #3C3489;
+    }
+
+    .badge-infra {
+      background: var(--color-background-warning);
+      color: var(--color-text-warning);
+    }
+
+    .badge-agt {
+      background: #FAECE7;
+      color: #993C1D;
+    }
+
+    .badge-qa {
+      background: var(--color-background-success);
+      color: var(--color-text-success);
+    }
+
+    .task-title {
+      font-size: 13px;
+      color: var(--color-text-primary);
+      line-height: 1.4;
+      margin-bottom: 4px;
+    }
+
+    .task-desc {
+      font-size: 11px;
+      color: var(--color-text-secondary);
+      line-height: 1.5;
+    }
+
+    .task-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 8px;
+    }
+
+    .points {
+      font-size: 11px;
+      color: var(--color-text-tertiary);
+    }
+
+    .epic-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .empty {
+      font-size: 13px;
+      color: var(--color-text-tertiary);
+      padding: 12px;
+      text-align: center;
+    }
+
+    .stats {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .stat {
+      background: var(--color-background-secondary);
+      border-radius: 8px;
+      padding: 8px 14px;
+    }
+
+    .stat-num {
+      font-size: 20px;
+      font-weight: 500;
+      color: var(--color-text-primary);
+    }
+
+    .stat-lbl {
+      font-size: 11px;
+      color: var(--color-text-secondary);
+    }
+  </style>
+</head>
+
+<body>
+  <div class="board">
+    <div class="stats" id="stats"></div>
+    <div class="controls">
+      <input class="search" type="text" id="search" placeholder="Pesquisar tasks..." oninput="render()">
+      <button class="filter-btn active" onclick="setFilter('all',this)">Todas</button>
+      <button class="filter-btn" onclick="setFilter('BE',this)">Backend</button>
+      <button class="filter-btn" onclick="setFilter('FE',this)">Frontend</button>
+      <button class="filter-btn" onclick="setFilter('INFRA',this)">Infra</button>
+      <button class="filter-btn" onclick="setFilter('AGT',this)">AGT</button>
+      <button class="filter-btn" onclick="setFilter('QA',this)">QA</button>
+    </div>
+    <div id="board-content"></div>
+  </div>
+
+  <script>
+    const EPICS = {
+      'setup': { label: 'Setup', color: '#888780' },
+      'auth': { label: 'Auth & Segurança', color: '#185FA5' },
+      'paciente': { label: 'Paciente', color: '#1D9E75' },
+      'clinico': { label: 'Clínico', color: '#534AB7' },
+      'intern': { label: 'Internamento', color: '#9F3D6E' },
+      'lab': { label: 'Lab / Farmácia', color: '#3B6D11' },
+      'fat': { label: 'Faturação', color: '#BA7517' },
+      'agt': { label: 'AGT', color: '#993C1D' },
+      'bi': { label: 'BI / Reports', color: '#0F6E56' },
+      'qa': { label: 'QA / Deploy', color: '#A32D2D' },
+    };
+
+    const SPRINTS = [
+      {
+        id: 'S0', title: 'Sprint 0 — Setup e Fundações', weeks: 'Semanas 1–2',
+        tasks: [
+          { id: 'T-001', title: 'Criar repositório Git com estrutura monorepo', desc: 'Organizar /frontend, /backend, /infra, /docs com .gitignore e README inicial', type: ['INFRA'], epic: 'setup', pts: 1 },
+          { id: 'T-002', title: 'Configurar docker-compose base', desc: 'Serviços: postgres, redis, backend (Spring), frontend (Angular), nginx. Volumes e networks definidos', type: ['INFRA'], epic: 'setup', pts: 3 },
+          { id: 'T-003', title: 'Criar Dockerfile para Spring Boot', desc: 'Multi-stage build: compilação com Maven, imagem runtime slim JRE 21', type: ['INFRA', 'BE'], epic: 'setup', pts: 2 },
+          { id: 'T-004', title: 'Criar Dockerfile para Angular', desc: 'Build com Node 20, serve com nginx alpine, configuração do nginx.conf', type: ['INFRA', 'FE'], epic: 'setup', pts: 2 },
+          { id: 'T-005', title: 'Configurar PostgreSQL no Docker', desc: 'Init script, healthcheck, variáveis de ambiente via .env, volume persistente', type: ['INFRA'], epic: 'setup', pts: 1 },
+          { id: 'T-006', title: 'Configurar Redis no Docker', desc: 'Modo standalone, persistência RDB, senha via env', type: ['INFRA'], epic: 'setup', pts: 1 },
+          { id: 'T-007', title: 'Configurar MinIO no Docker', desc: 'Armazenamento de PDFs e imagens. Bucket inicial: documentos-hospital', type: ['INFRA'], epic: 'setup', pts: 2 },
+          { id: 'T-008', title: 'Configurar RabbitMQ no Docker', desc: 'Management UI habilitada, exchanges e filas iniciais definidas', type: ['INFRA'], epic: 'setup', pts: 2 },
+          { id: 'T-009', title: 'Criar projeto Spring Boot base', desc: 'Spring Web, Security, Data JPA, Liquibase, Actuator, Lombok, MapStruct. Estrutura de packages', type: ['BE'], epic: 'setup', pts: 2 },
+          { id: 'T-010', title: 'Criar projeto Angular base', desc: 'Angular 17+, Angular Material, NgRx, standalone components. Configurar proxy para API', type: ['FE'], epic: 'setup', pts: 2 },
+          { id: 'T-011', title: 'Configurar Liquibase no backend', desc: 'Changelog master, primeiro migration: schema base. Conexão com Postgres containerizado', type: ['BE'], epic: 'setup', pts: 2 },
+          { id: 'T-012', title: 'Configurar Nginx como reverse proxy', desc: 'Routing: /api → spring:8080, / → angular:4200. Configuração CORS e headers', type: ['INFRA'], epic: 'setup', pts: 2 },
+          { id: 'T-013', title: 'Criar script .env de exemplo', desc: '.env.example com todas as variáveis necessárias documentadas. Nunca commitar .env real', type: ['INFRA'], epic: 'setup', pts: 1 },
+          { id: 'T-014', title: 'Configurar GitHub Actions CI básico', desc: 'Pipeline: build + testes unitários ao fazer push. Badge no README', type: ['INFRA'], epic: 'setup', pts: 3 },
+        ]
+      },
+      {
+        id: 'S1', title: 'Sprint 1 — Autenticação e Gestão de Utilizadores', weeks: 'Semanas 3–4',
+        tasks: [
+          { id: 'T-015', title: 'Migration: tabela de utilizadores e perfis', desc: 'Tabelas: users, roles, permissions, user_roles. UUIDs como PKs', type: ['BE'], epic: 'auth', pts: 2 },
+          { id: 'T-016', title: 'Implementar JWT authentication no Spring Security', desc: 'Login retorna access_token (15min) + refresh_token (7d). Endpoint POST /api/auth/login', type: ['BE'], epic: 'auth', pts: 3 },
+          { id: 'T-017', title: 'Implementar refresh token endpoint', desc: 'POST /api/auth/refresh. Revogar refresh tokens antigos. Armazenar no Redis', type: ['BE'], epic: 'auth', pts: 2 },
+          { id: 'T-018', title: 'Implementar logout e revogação de tokens', desc: 'Blacklist de tokens no Redis. DELETE /api/auth/logout', type: ['BE'], epic: 'auth', pts: 2 },
+          { id: 'T-019', title: 'CRUD de utilizadores (admin)', desc: 'Criar, listar, editar, desativar utilizadores. POST/GET/PUT/DELETE /api/admin/users', type: ['BE'], epic: 'auth', pts: 3 },
+          { id: 'T-020', title: 'Gestão de perfis e permissões', desc: 'Perfis: ADMIN, MEDICO, ENFERMEIRO, RECEPCAO, FARMACIA, FINANCEIRO, GESTOR. Associar permissões', type: ['BE'], epic: 'auth', pts: 3 },
+          { id: 'T-021', title: 'Tela de login no Angular', desc: 'Form de login com validação, interceptor HTTP para JWT, redirect após login, logo hospital', type: ['FE'], epic: 'auth', pts: 3 },
+          { id: 'T-022', title: 'Guard de rotas por perfil no Angular', desc: 'AuthGuard, RoleGuard. Redirect para 403 se sem permissão', type: ['FE'], epic: 'auth', pts: 2 },
+          { id: 'T-023', title: 'Interceptor HTTP para refresh automático de token', desc: 'Ao receber 401, tentar refresh. Se falhar, redirecionar para login', type: ['FE'], epic: 'auth', pts: 3 },
+          { id: 'T-024', title: 'Módulo de administração de utilizadores (UI)', desc: 'Listagem, criação, edição de utilizadores e atribuição de perfis', type: ['FE'], epic: 'auth', pts: 3 },
+          { id: 'T-025', title: 'Tela de perfil do utilizador logado', desc: 'Ver e editar dados pessoais, alterar senha', type: ['FE'], epic: 'auth', pts: 2 },
+        ]
+      },
+      {
+        id: 'S2', title: 'Sprint 2 — Módulo de Pacientes', weeks: 'Semanas 5–6',
+        tasks: [
+          { id: 'T-026', title: 'Migration: tabela de pacientes', desc: 'Campos: id, numero_processo, nome_completo, data_nascimento, sexo, bi_passaporte, nacionalidade, contacto, morada, grupo_sanguineo, alergias, criado_em', type: ['BE'], epic: 'paciente', pts: 2 },
+          { id: 'T-027', title: 'Migration: tabela de contactos de emergência', desc: 'Relação N:1 com paciente. Campos: nome, parentesco, telefone', type: ['BE'], epic: 'paciente', pts: 1 },
+          { id: 'T-028', title: 'CRUD de pacientes (API REST)', desc: 'POST/GET/PUT /api/pacientes. Validação de BI/passaporte angolano. Geração de número de processo', type: ['BE'], epic: 'paciente', pts: 3 },
+          { id: 'T-029', title: 'Pesquisa de pacientes (filtros e paginação)', desc: 'GET /api/pacientes?search=&page=&size=. Pesquisa por nome, BI, número de processo', type: ['BE'], epic: 'paciente', pts: 2 },
+          { id: 'T-030', title: 'Upload de foto do paciente via MinIO', desc: 'POST /api/pacientes/{id}/foto. Armazenar no MinIO, retornar URL pré-assinada', type: ['BE'], epic: 'paciente', pts: 2 },
+          { id: 'T-031', title: 'Módulo de registo de paciente (UI)', desc: 'Formulário completo: dados pessoais, documentos, contactos, informação clínica base', type: ['FE'], epic: 'paciente', pts: 4 },
+          { id: 'T-032', title: 'Componente de pesquisa de pacientes', desc: 'Input com autocomplete, resultados em tempo real, paginação. Reutilizável em todo o sistema', type: ['FE'], epic: 'paciente', pts: 3 },
+          { id: 'T-033', title: 'Perfil completo do paciente (UI)', desc: 'Visualizar todos os dados, histórico de visitas, documentos. Layout em tabs', type: ['FE'], epic: 'paciente', pts: 4 },
+          { id: 'T-034', title: 'Validação de BI angolano no frontend', desc: 'Regex e checksum para validar formato do BI angolano (10 dígitos + código)', type: ['FE'], epic: 'paciente', pts: 2 },
+          { id: 'T-035', title: 'Impressão de cartão de identificação do paciente', desc: 'Gerar PDF com número de processo, nome, foto, código QR. Via MinIO', type: ['BE'], epic: 'paciente', pts: 3 },
+        ]
+      },
+      {
+        id: 'S3', title: 'Sprint 3 — Receção, Admissão e Triagem', weeks: 'Semanas 7–8',
+        tasks: [
+          { id: 'T-036', title: 'Migration: tabelas de episódio e admissão', desc: 'Tabelas: episodio (tipo: urgencia/consulta/internamento), admissao, fila_espera', type: ['BE'], epic: 'paciente', pts: 2 },
+          { id: 'T-037', title: 'API de criação de episódio', desc: 'POST /api/episodios. Associa paciente, tipo, médico destino, seguradora. Gera número de episódio', type: ['BE'], epic: 'paciente', pts: 3 },
+          { id: 'T-038', title: 'Gestão de fila de espera (API)', desc: 'GET /api/fila-espera, PUT prioridade, WebSocket para atualização em tempo real', type: ['BE'], epic: 'paciente', pts: 3 },
+          { id: 'T-039', title: 'Migration: tabela de triagem', desc: 'Campos: episodio_id, nivel_manchester, sintomas, sinais_vitais (JSON), enfermeiro_id, data_hora', type: ['BE'], epic: 'paciente', pts: 1 },
+          { id: 'T-040', title: 'API de triagem', desc: 'POST /api/triagem. Escala Manchester: vermelho/laranja/amarelo/verde/azul. Atualizar prioridade na fila', type: ['BE'], epic: 'paciente', pts: 3 },
+          { id: 'T-041', title: 'Tela de receção e admissão (UI)', desc: 'Pesquisar ou criar paciente, selecionar tipo de atendimento, especialidade, médico, seguradora', type: ['FE'], epic: 'paciente', pts: 4 },
+          { id: 'T-042', title: 'Painel de fila de espera em tempo real (UI)', desc: 'Lista atualizada via WebSocket, cores por prioridade Manchester, tempo de espera, chamar próximo', type: ['FE'], epic: 'paciente', pts: 4 },
+          { id: 'T-043', title: 'Formulário de triagem com escala Manchester (UI)', desc: 'Fluxograma de decisão interativo, registo de sinais vitais, resultado automático da prioridade', type: ['FE'], epic: 'paciente', pts: 5 },
+          { id: 'T-044', title: 'Configurar WebSocket no Spring Boot', desc: 'STOMP over WebSocket. Tópicos: /topic/fila-espera, /topic/chamadas', type: ['BE'], epic: 'setup', pts: 3 },
+        ]
+      },
+      {
+        id: 'S4', title: 'Sprint 4 — Consultas e Módulo Clínico', weeks: 'Semanas 9–10',
+        tasks: [
+          { id: 'T-045', title: 'Migration: tabelas de consulta e nota clínica', desc: 'Tabelas: consulta, nota_clinica (SOAP), diagnostico (CID-10), prescricao, medicamento_prescrito', type: ['BE'], epic: 'clinico', pts: 2 },
+          { id: 'T-046', title: 'Migration: agenda médica', desc: 'Tabela: agenda_medico (medico_id, data, hora_inicio, hora_fim, tipo_slot, episodio_id)', type: ['BE'], epic: 'clinico', pts: 1 },
+          { id: 'T-047', title: 'API de agenda e agendamento', desc: 'GET /api/agenda?medico={id}&data={date}. POST /api/agendamentos. Verificar conflitos de horário', type: ['BE'], epic: 'clinico', pts: 3 },
+          { id: 'T-048', title: 'API de consulta e nota clínica', desc: 'POST /api/consultas, PUT /api/consultas/{id}/nota-clinica. Estrutura SOAP (subjetivo/objetivo/avaliação/plano)', type: ['BE'], epic: 'clinico', pts: 3 },
+          { id: 'T-049', title: 'API de diagnósticos com CID-10', desc: 'Pesquisa por código ou descrição CID-10. Tabela de referência carregada via Liquibase', type: ['BE'], epic: 'clinico', pts: 2 },
+          { id: 'T-050', title: 'API de prescrição eletrónica', desc: 'POST /api/prescricoes. Medicamento, dosagem, frequência, duração, observações. Integração com farmácia', type: ['BE'], epic: 'clinico', pts: 3 },
+          { id: 'T-051', title: 'API de referenciação entre especialidades', desc: 'POST /api/referencias. Criar episódio filho na especialidade de destino', type: ['BE'], epic: 'clinico', pts: 2 },
+          { id: 'T-052', title: 'Agenda médica (UI)', desc: 'Calendário semanal, slots disponíveis e ocupados, arrastar para reagendar, criar agendamento', type: ['FE'], epic: 'clinico', pts: 5 },
+          { id: 'T-053', title: 'Tela de consulta (UI — visão do médico)', desc: 'Dados do paciente, campos SOAP, pesquisa CID-10, adicionar diagnósticos, prescrever', type: ['FE'], epic: 'clinico', pts: 5 },
+          { id: 'T-054', title: 'Módulo de prescrição eletrónica (UI)', desc: 'Pesquisa de medicamentos, dosagem com autocomplete, imprimir prescrição em PDF', type: ['FE'], epic: 'clinico', pts: 4 },
+        ]
+      },
+      {
+        id: 'S5', title: 'Sprint 5 — Internamento e Bloco Operatório', weeks: 'Semanas 11–12',
+        tasks: [
+          { id: 'T-055', title: 'Migration: tabelas de internamento e camas', desc: 'Tabelas: enfermaria, cama (numero, tipo, estado: livre/ocupada/limpeza), internamento', type: ['BE'], epic: 'intern', pts: 2 },
+          { id: 'T-056', title: 'API de gestão de camas', desc: 'GET /api/camas (mapa completo), PUT /api/camas/{id}/estado. Histórico de ocupação', type: ['BE'], epic: 'intern', pts: 3 },
+          { id: 'T-057', title: 'API de internamento', desc: 'POST admitir, PUT transferir cama/enfermaria, POST alta de internamento', type: ['BE'], epic: 'intern', pts: 3 },
+          { id: 'T-058', title: 'API de evolução diária de enfermagem', desc: 'POST /api/internamentos/{id}/evolucao. Registo por turno: sinais vitais, medicação, observações', type: ['BE'], epic: 'intern', pts: 2 },
+          { id: 'T-059', title: 'Migration: tabelas de cirurgia', desc: 'Tabelas: cirurgia (tipo, data_hora, estado), equipa_cirurgica, registo_anestesico', type: ['BE'], epic: 'intern', pts: 1 },
+          { id: 'T-060', title: 'API de agendamento e registo de cirurgia', desc: 'POST /api/cirurgias, PUT registo intraoperatório, relatorio pós-operatório', type: ['BE'], epic: 'intern', pts: 3 },
+          { id: 'T-061', title: 'Mapa visual de camas (UI)', desc: 'Grid por enfermaria. Camas coloridas por estado. Clicar para ver paciente, admitir ou libertar', type: ['FE'], epic: 'intern', pts: 5 },
+          { id: 'T-062', title: 'Tela de internamento — visão de enfermagem (UI)', desc: 'Lista de pacientes internados, registar evolução por turno, ver prescrições ativas', type: ['FE'], epic: 'intern', pts: 4 },
+          { id: 'T-063', title: 'Módulo de bloco operatório (UI)', desc: 'Agenda de cirurgias, checklist pré-operatório, formulário de registo cirúrgico', type: ['FE'], epic: 'intern', pts: 4 },
+        ]
+      },
+      {
+        id: 'S6', title: 'Sprint 6 — Laboratório, Imagiologia e Farmácia', weeks: 'Semanas 13–14',
+        tasks: [
+          { id: 'T-064', title: 'Migration: tabelas de exames laboratoriais', desc: 'Tabelas: tipo_exame, requisicao_exame, resultado_exame (valores + unidades + referência)', type: ['BE'], epic: 'lab', pts: 2 },
+          { id: 'T-065', title: 'API de requisição e resultados de exames', desc: 'POST /api/exames/requisicao, PUT submeter resultado, GET histórico por paciente', type: ['BE'], epic: 'lab', pts: 3 },
+          { id: 'T-066', title: 'Upload de PDF de resultado de exame', desc: 'PUT /api/exames/{id}/resultado-pdf. Armazenar no MinIO, notificar médico via RabbitMQ', type: ['BE'], epic: 'lab', pts: 2 },
+          { id: 'T-067', title: 'Migration: tabelas de farmácia e stock', desc: 'Tabelas: medicamento, stock_medicamento, lote (validade, quantidade), movimentacao_stock', type: ['BE'], epic: 'lab', pts: 2 },
+          { id: 'T-068', title: 'API de dispensação de medicamentos', desc: 'POST /api/farmacia/dispensacao. Validar prescrição, decrementar stock, registar saída', type: ['BE'], epic: 'lab', pts: 3 },
+          { id: 'T-069', title: 'API de gestão de stock da farmácia', desc: 'CRUD medicamentos, entrada de stock por lote, alertas de stock mínimo e validade via RabbitMQ', type: ['BE'], epic: 'lab', pts: 3 },
+          { id: 'T-070', title: 'Módulo de laboratório (UI)', desc: 'Requisitar exames, ver estado pendente/concluído, visualizar e imprimir resultados', type: ['FE'], epic: 'lab', pts: 4 },
+          { id: 'T-071', title: 'Módulo de farmácia — dispensação (UI)', desc: 'Listar prescrições ativas por paciente, confirmar dispensação, quantidade e lote', type: ['FE'], epic: 'lab', pts: 4 },
+          { id: 'T-072', title: 'Módulo de stock da farmácia (UI)', desc: 'Listagem de medicamentos, alertas de rutura/validade, entrada de lotes', type: ['FE'], epic: 'lab', pts: 3 },
+        ]
+      },
+      {
+        id: 'S7', title: 'Sprint 7 — Faturação e Motor de Preços', weeks: 'Semanas 15–16',
+        tasks: [
+          { id: 'T-073', title: 'Migration: tabela de preços e atos clínicos', desc: 'Tabelas: tabela_preco, ato_clinico (código SNS-AO, descrição, preço base)', type: ['BE'], epic: 'fat', pts: 2 },
+          { id: 'T-074', title: 'Migration: tabelas de seguradoras e acordos', desc: 'Tabelas: seguradora (ENSA, AAA, Nossa, ANGO VIDA…), acordo_seguradora (% cobertura por ato)', type: ['BE'], epic: 'fat', pts: 2 },
+          { id: 'T-075', title: 'Motor de apuramento de custos do episódio', desc: 'Service que agrega: consultas, exames, medicamentos, cirurgias, diárias de internamento e calcula total', type: ['BE'], epic: 'fat', pts: 5 },
+          { id: 'T-076', title: 'API de pré-fatura (resumo de custos)', desc: 'GET /api/faturacao/episodio/{id}/resumo. Listar itens, aplicar desconto de seguradora, calcular co-pagamento', type: ['BE'], epic: 'fat', pts: 3 },
+          { id: 'T-077', title: 'Configuração de tabela de preços (UI)', desc: 'CRUD de atos clínicos e preços. Importação de tabela SNS-AO via CSV', type: ['FE'], epic: 'fat', pts: 3 },
+          { id: 'T-078', title: 'Configuração de acordos com seguradoras (UI)', desc: 'Gestão de coberturas por seguradora: percentagem, teto máximo, atos excluídos', type: ['FE'], epic: 'fat', pts: 3 },
+          { id: 'T-079', title: 'Tela de pré-fatura (UI)', desc: 'Resumo detalhado de todos os itens consumidos no episódio. Aplicar seguradora, ver co-pagamento', type: ['FE'], epic: 'fat', pts: 4 },
+          { id: 'T-080', title: 'Gestão de pagamentos parciais e adiantamentos', desc: 'API e UI para registar pagamentos antes da alta. Calcular saldo em aberto', type: ['BE'], epic: 'fat', pts: 3 },
+        ]
+      },
+      {
+        id: 'S8', title: 'Sprint 8 — Fatura Eletrónica AGT', weeks: 'Semanas 17–18',
+        tasks: [
+          { id: 'T-081', title: 'Estudar e documentar normas AGT para fatura eletrónica', desc: 'Formato XML AGT, campos obrigatórios, série de faturação, assinatura digital, QR Code. Guardar docs em /docs/agt', type: ['AGT'], epic: 'agt', pts: 3 },
+          { id: 'T-082', title: 'Migration: tabela de séries e numeração de faturas', desc: 'Tabela: serie_fatura (prefixo, ano, contador, tipo). Garantir sequência sem gaps', type: ['BE', 'AGT'], epic: 'agt', pts: 2 },
+          { id: 'T-083', title: 'Serviço de geração de XML para fatura AGT', desc: 'Mapear dados do episódio para formato XML AGT. Campos: NIF hospital, NIF cliente, linhas de detalhe, IVA, total', type: ['BE', 'AGT'], epic: 'agt', pts: 5 },
+          { id: 'T-084', title: 'Geração de QR Code de validação AGT', desc: 'QR Code com hash da fatura conforme especificação AGT. Biblioteca ZXing', type: ['BE', 'AGT'], epic: 'agt', pts: 3 },
+          { id: 'T-085', title: 'Geração de PDF da fatura eletrónica', desc: 'Modelo de fatura conforme layout AGT: cabeçalho, itens, totais, IVA, QR Code, rodapé legal. iText/JasperReports', type: ['BE', 'AGT'], epic: 'agt', pts: 5 },
+          { id: 'T-086', title: 'API de emissão de fatura', desc: 'POST /api/faturas/emitir. Transação atómica: gerar XML + PDF + gravar BD + armazenar MinIO', type: ['BE', 'AGT'], epic: 'agt', pts: 3 },
+          { id: 'T-087', title: 'Geração de SAFT-AO (ficheiro mensal)', desc: 'Exportar ficheiro SAF-T Angola com todas as faturas do período. GET /api/relatorios/saft?mes=&ano=', type: ['BE', 'AGT'], epic: 'agt', pts: 5 },
+          { id: 'T-088', title: 'Integração com portal da AGT (submissão de faturas)', desc: 'Envio automático de faturas ao portal AGT via API (se disponível) ou geração de lote para upload manual', type: ['BE', 'AGT'], epic: 'agt', pts: 5 },
+          { id: 'T-089', title: 'Anulação e nota de crédito', desc: 'POST /api/faturas/{id}/anular. Gerar nota de crédito referenciando fatura original. Regras AGT', type: ['BE', 'AGT'], epic: 'agt', pts: 3 },
+          { id: 'T-090', title: 'Tela de faturação — emissão (UI)', desc: 'Ver resumo do episódio, confirmar dados do cliente/NIF, emitir fatura, download PDF, enviar por email', type: ['FE', 'AGT'], epic: 'agt', pts: 4 },
+          { id: 'T-091', title: 'Registo de pagamento final e recibo (UI)', desc: 'Registar meio de pagamento (numerário, TPA, transferência), emitir recibo', type: ['FE'], epic: 'fat', pts: 3 },
+          { id: 'T-092', title: 'Listagem e pesquisa de faturas emitidas (UI)', desc: 'Filtrar por data, estado, paciente, valor. Download PDF, ver XML, emitir nota de crédito', type: ['FE', 'AGT'], epic: 'agt', pts: 3 },
+        ]
+      },
+      {
+        id: 'S9', title: 'Sprint 9 — Dashboards, BI e Relatórios', weeks: 'Semanas 19–20',
+        tasks: [
+          { id: 'T-093', title: 'API de KPIs hospitalares', desc: 'Endpoints: ocupação de camas, pacientes/dia, tempo médio de espera, receita do período', type: ['BE'], epic: 'bi', pts: 3 },
+          { id: 'T-094', title: 'Dashboard de gestão hospitalar (UI)', desc: 'Cards KPI + gráficos: atendimentos por dia, top diagnósticos, ocupação por enfermaria. Chart.js', type: ['FE'], epic: 'bi', pts: 5 },
+          { id: 'T-095', title: 'Dashboard financeiro (UI)', desc: 'Receita por período, faturas pagas/pendentes, receita por seguradora, ticket médio', type: ['FE'], epic: 'bi', pts: 4 },
+          { id: 'T-096', title: 'Relatório de produção médica', desc: 'Atendimentos por médico, por especialidade, por período. Exportar Excel/PDF', type: ['BE', 'FE'], epic: 'bi', pts: 3 },
+          { id: 'T-097', title: 'Relatório de stock da farmácia', desc: 'Consumo por medicamento, alertas de rutura, lotes a vencer. Exportar Excel', type: ['BE', 'FE'], epic: 'bi', pts: 2 },
+          { id: 'T-098', title: 'Relatório para SNS-AO', desc: 'Estatísticas de internamento, altas, diagnósticos mais frequentes conforme formato SNS-AO', type: ['BE'], epic: 'bi', pts: 3 },
+        ]
+      },
+      {
+        id: 'S10', title: 'Sprint 10 — QA, Segurança e Deploy', weeks: 'Semanas 21–22',
+        tasks: [
+          { id: 'T-099', title: 'Testes unitários Spring Boot (cobertura ≥ 80%)', desc: 'JUnit 5 + Mockito. Focar em: motor de faturação, serviço AGT, lógica de triagem', type: ['QA', 'BE'], epic: 'qa', pts: 5 },
+          { id: 'T-100', title: 'Testes de integração Spring Boot', desc: 'TestContainers com Postgres real. Testar fluxo completo: admissão → fatura', type: ['QA', 'BE'], epic: 'qa', pts: 4 },
+          { id: 'T-101', title: 'Testes E2E com Cypress', desc: 'Fluxo crítico: login → admissão paciente → triagem → consulta → alta → emitir fatura', type: ['QA', 'FE'], epic: 'qa', pts: 5 },
+          { id: 'T-102', title: 'Auditoria de segurança da API', desc: 'OWASP Top 10. Rate limiting (Bucket4j), validação de inputs, headers de segurança HTTP', type: ['BE', 'QA'], epic: 'qa', pts: 4 },
+          { id: 'T-103', title: 'Criptografia de dados sensíveis na BD', desc: 'Encriptar: NIF, BI, dados clínicos sensíveis. Jasypt para propriedades da aplicação', type: ['BE'], epic: 'qa', pts: 3 },
+          { id: 'T-104', title: 'Configurar backup automático do PostgreSQL', desc: 'pg_dump diário via cron dentro do container. Guardar em MinIO. Retenção de 30 dias', type: ['INFRA'], epic: 'qa', pts: 2 },
+          { id: 'T-105', title: 'Configurar monitorização com Prometheus + Grafana', desc: 'Métricas do Spring Actuator → Prometheus → dashboard Grafana: latência, erros, JVM', type: ['INFRA'], epic: 'qa', pts: 3 },
+          { id: 'T-106', title: 'Logging centralizado com ELK Stack', desc: 'Logback → Logstash → Elasticsearch → Kibana. Logs estruturados em JSON', type: ['INFRA'], epic: 'qa', pts: 4 },
+          { id: 'T-107', title: 'Preparar docker-compose de produção', desc: 'Versão prod sem volumes de dev, restart policies, limites de memória, secrets via env', type: ['INFRA'], epic: 'qa', pts: 2 },
+          { id: 'T-108', title: 'Configurar SSL/TLS com certificado', desc: 'Certificado Let\'s Encrypt ou auto-assinado. Configurar Nginx com HTTPS obrigatório', type: ['INFRA'], epic: 'qa', pts: 2 },
+          { id: 'T-109', title: 'Documentação da API com Swagger/OpenAPI', desc: 'Todos os endpoints documentados com exemplos. Swagger UI disponível em /api/docs', type: ['BE'], epic: 'qa', pts: 2 },
+          { id: 'T-110', title: 'Manual do utilizador por perfil', desc: 'Documentação em PDF para: recepcionista, médico, enfermeiro, farmacêutico, financeiro, admin', type: ['QA'], epic: 'qa', pts: 4 },
+        ]
+      }
+    ];
+
+    let activeFilter = 'all';
+
+    function setFilter(f, btn) {
+      activeFilter = f;
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      render();
+    }
+
+    function render() {
+      const q = document.getElementById('search').value.toLowerCase();
+      const content = document.getElementById('board-content');
+      let html = '';
+      let total = 0, shown = 0;
+
+      SPRINTS.forEach(sprint => {
+        const tasks = sprint.tasks.filter(t => {
+          const matchFilter = activeFilter === 'all' || t.type.includes(activeFilter);
+          const matchSearch = !q || t.title.toLowerCase().includes(q) || t.id.toLowerCase().includes(q) || t.desc.toLowerCase().includes(q);
+          return matchFilter && matchSearch;
+        });
+        total += sprint.tasks.length;
+        shown += tasks.length;
+        if (tasks.length === 0) return;
+
+        const totalPts = tasks.reduce((a, t) => a + t.pts, 0);
+        const sprintId = sprint.id;
+
+        html += `<div class="sprint-block">
+      <div class="sprint-header" onclick="toggleSprint('${sprintId}')">
+        <span class="sprint-title">${sprint.title}</span>
+        <span class="sprint-meta">${sprint.weeks} · ${tasks.length} tasks · ${totalPts} pts</span>
+        <span class="sprint-toggle" id="toggle-${sprintId}">▼</span>
+      </div>
+      <div id="tasks-${sprintId}" class="tasks-grid">`;
+
+        tasks.forEach(t => {
+          const badges = t.type.map(tp => {
+            const cls = tp === 'BE' ? 'badge-be' : tp === 'FE' ? 'badge-fe' : tp === 'INFRA' ? 'badge-infra' : tp === 'AGT' ? 'badge-agt' : 'badge-qa';
+            return `<span class="badge ${cls}">${tp}</span>`;
+          }).join('');
+          const epic = EPICS[t.epic];
+          html += `<div class="task">
+        <div class="task-top">
+          <span class="task-id">${t.id}</span>
+          <div class="task-badges">${badges}</div>
+        </div>
+        <div class="task-title">${t.title}</div>
+        <div class="task-desc">${t.desc}</div>
+        <div class="task-footer">
+          <span style="display:flex;align-items:center;gap:4px;">
+            <span class="epic-dot" style="background:${epic.color}"></span>
+            <span style="font-size:11px;color:var(--color-text-tertiary)">${epic.label}</span>
+          </span>
+          <span class="points">${t.pts} pts</span>
+        </div>
+      </div>`;
+        });
+
+        html += `</div></div>`;
+      });
+
+      content.innerHTML = html;
+
+      const allPts = SPRINTS.flatMap(s => s.tasks).reduce((a, t) => a + t.pts, 0);
+      const shownPts = SPRINTS.flatMap(s => s.tasks).filter(t => {
+        const matchFilter = activeFilter === 'all' || t.type.includes(activeFilter);
+        const q2 = document.getElementById('search').value.toLowerCase();
+        return matchFilter && (!q2 || t.title.toLowerCase().includes(q2) || t.id.toLowerCase().includes(q2));
+      }).reduce((a, t) => a + t.pts, 0);
+
+      document.getElementById('stats').innerHTML = `
+    <div class="stat"><div class="stat-num">${SPRINTS.length}</div><div class="stat-lbl">Sprints</div></div>
+    <div class="stat"><div class="stat-num">${shown}</div><div class="stat-lbl">Tasks visíveis</div></div>
+    <div class="stat"><div class="stat-num">${total}</div><div class="stat-lbl">Total tasks</div></div>
+    <div class="stat"><div class="stat-num">${shownPts}</div><div class="stat-lbl">Story points</div></div>
+    <div class="stat"><div class="stat-num">22</div><div class="stat-lbl">Semanas estimadas</div></div>
+  `;
+    }
+
+    function toggleSprint(id) {
+      const el = document.getElementById('tasks-' + id);
+      const tog = document.getElementById('toggle-' + id);
+      if (el.style.display === 'none') {
+        el.style.display = 'grid';
+        tog.textContent = '▼';
+      } else {
+        el.style.display = 'none';
+        tog.textContent = '▶';
+      }
+    }
+
+    render();
+  </script>
+</body>
+
+</html>
