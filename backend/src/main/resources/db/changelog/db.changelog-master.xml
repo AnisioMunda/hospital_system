@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+    http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <!--
+        HospitalAO — Liquibase Changelog Master
+        =========================================
+        Este ficheiro lista todos os migrations por ordem.
+        O Liquibase lê-o ao arrancar e aplica os que ainda
+        não foram aplicados à base de dados.
+
+        Como adicionar um novo migration:
+          1. Criar o ficheiro SQL/XML na pasta correcta
+          2. Adicionar um <include> aqui
+
+        Convenção de nomes:
+          sprint-XX/NNN-descricao-curta.xml
+          Ex: sprint-01/001-criar-tabela-users.xml
+
+        IMPORTANTE: nunca alterar um migration já aplicado.
+        Se precisas de corrigir algo, cria um novo migration.
+    -->
+
+    <!-- ================================================ -->
+    <!-- Sprint 1 — Autenticação e Utilizadores           -->
+    <!-- (os includes serão adicionados na Sprint 1)      -->
+    <!-- ================================================ -->
+
+    <!--
+    <include file="db/changelog/sprint-01/001-criar-tabela-users.xml"/>
+    <include file="db/changelog/sprint-01/002-criar-tabela-roles.xml"/>
+    <include file="db/changelog/sprint-01/003-criar-tabela-permissions.xml"/>
+    <include file="db/changelog/sprint-01/004-inserir-dados-iniciais.xml"/>
+    -->
+
+</databaseChangeLog>
