@@ -5,56 +5,30 @@
     xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
     http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
 
-    <!--
-        Migration: 001-schema-base
-        ===========================
-        Cria os fundamentos que TODAS as tabelas futuras vão usar:
-          - Tipos enumerados globais (sexo, estado de registos)
-          - Tabela de auditoria (regista quem alterou o quê)
-          - Função de trigger para auditoria automática
+    <!-- ================================================ -->
+    <!-- CHANGESET 1: Criar schema de auditoria           -->
+    <!-- ================================================ -->
+    <changeSet id="001-00-criar-schema-auditoria" author="hospitalao">
+        <sql>CREATE SCHEMA IF NOT EXISTS auditoria;</sql>
+        <rollback>
+            <sql>DROP SCHEMA IF EXISTS auditoria CASCADE;</sql>
+        </rollback>
+    </changeSet>
 
-        Autor: HospitalAO Team
-        Data: 2024-01-15
-    -->
 
     <!-- ================================================ -->
-    <!-- CHANGESET 1: Tipos enumerados globais             -->
+    <!-- CHANGESET 2: Tipos enumerados globais             -->
     <!-- ================================================ -->
-    <!--
-        Um changeset é a unidade mínima de mudança no Liquibase.
-        Cada changeset tem um ID único e um author.
-        Uma vez aplicado, NUNCA é alterado.
+    <changeSet id="001-01-tipos-enum" author="hospitalao">
 
-        "runOnChange: false" (padrão) — só corre uma vez.
-        "failOnError: true"  (padrão) — para tudo se falhar.
-    -->
-    <changeSet id="001-01-tipos-enum" author="hospitalaо">
-        <comment>
-            Criar tipos enumerados usados em várias tabelas.
-            Usar ENUMs em vez de strings garante consistência
-            e validação ao nível da base de dados.
-        </comment>
-
-        <!--
-            Sexo biológico do paciente.
-            Usado em: triagem, estatísticas clínicas,
-            dosagem de medicamentos por peso/género.
-        -->
         <sql>
             DO $$ BEGIN
                 CREATE TYPE sexo_enum AS ENUM ('MASCULINO', 'FEMININO');
             EXCEPTION
-                WHEN duplicate_object THEN
-                    RAISE NOTICE 'Tipo sexo_enum já existe, a ignorar.';
+                WHEN duplicate_object THEN NULL;
             END $$;
         </sql>
 
-        <!--
-            Estado de qualquer registo do sistema.
-            Em sistemas hospitalares NUNCA apagamos dados —
-            apenas marcamos como INACTIVO.
-            Isto garante rastreabilidade total e conformidade legal.
-        -->
         <sql>
             DO $$ BEGIN
                 CREATE TYPE estado_registo_enum AS ENUM (
@@ -63,15 +37,10 @@
                     'SUSPENSO'
                 );
             EXCEPTION
-                WHEN duplicate_object THEN
-                    RAISE NOTICE 'Tipo estado_registo_enum já existe, a ignorar.';
+                WHEN duplicate_object THEN NULL;
             END $$;
         </sql>
 
-        <!--
-            Tipo de episódio hospitalar.
-            Define o fluxo que o paciente vai seguir.
-        -->
         <sql>
             DO $$ BEGIN
                 CREATE TYPE tipo_episodio_enum AS ENUM (
@@ -82,99 +51,58 @@
                     'EXAME'
                 );
             EXCEPTION
-                WHEN duplicate_object THEN
-                    RAISE NOTICE 'Tipo tipo_episodio_enum já existe, a ignorar.';
+                WHEN duplicate_object THEN NULL;
             END $$;
         </sql>
 
         <rollback>
-            <!-- O rollback desfaz o changeset se algo correr mal -->
-            DROP TYPE IF EXISTS tipo_episodio_enum;
-            DROP TYPE IF EXISTS estado_registo_enum;
-            DROP TYPE IF EXISTS sexo_enum;
+            <sql>
+                DROP TYPE IF EXISTS tipo_episodio_enum;
+                DROP TYPE IF EXISTS estado_registo_enum;
+                DROP TYPE IF EXISTS sexo_enum;
+            </sql>
         </rollback>
     </changeSet>
 
 
     <!-- ================================================ -->
-    <!-- CHANGESET 2: Tabela de auditoria                 -->
+    <!-- CHANGESET 3: Tabela de auditoria                 -->
     <!-- ================================================ -->
-    <changeSet id="001-02-tabela-auditoria" author="hospitalaо">
-        <comment>
-            Tabela que regista TODAS as alterações a dados sensíveis.
-            Obrigatória em sistemas de saúde por lei.
-
-            Exemplo do que fica registado:
-              - Utilizador: dr.silva@hospital.ao
-              - Tabela: pacientes
-              - Operação: UPDATE
-              - Campo alterado: diagnostico
-              - Valor anterior: "Hipertensão"
-              - Valor novo: "Hipertensão + Diabetes"
-              - Data/hora: 2024-01-15 14:32:07 (hora de Luanda)
-        </comment>
+    <changeSet id="001-02-tabela-auditoria" author="hospitalao">
 
         <createTable tableName="auditoria_log" schemaName="auditoria">
             <column name="id" type="BIGSERIAL">
                 <constraints primaryKey="true" nullable="false"/>
             </column>
-
-            <!-- Quem fez a alteração -->
             <column name="utilizador_id" type="UUID">
                 <constraints nullable="true"/>
-                <!-- nullable: permite registar acções do sistema sem utilizador -->
             </column>
             <column name="utilizador_nome" type="VARCHAR(200)">
                 <constraints nullable="true"/>
             </column>
-
-            <!-- O quê foi alterado -->
             <column name="tabela_nome" type="VARCHAR(100)">
                 <constraints nullable="false"/>
             </column>
             <column name="registo_id" type="VARCHAR(100)">
                 <constraints nullable="false"/>
-                <!-- UUID do registo alterado, guardado como texto -->
             </column>
-
-            <!-- Tipo de operação -->
             <column name="operacao" type="VARCHAR(10)">
                 <constraints nullable="false"/>
-                <!-- Valores: INSERT, UPDATE, DELETE -->
             </column>
-
-            <!-- Os dados antes e depois da alteração (formato JSON) -->
             <column name="dados_anteriores" type="JSONB">
                 <constraints nullable="true"/>
-                <!-- null em INSERTs (não havia dados antes) -->
             </column>
             <column name="dados_novos" type="JSONB">
                 <constraints nullable="true"/>
-                <!-- null em DELETEs (não há dados novos) -->
             </column>
-
-            <!-- Informação técnica -->
             <column name="ip_origem" type="VARCHAR(45)">
                 <constraints nullable="true"/>
-                <!-- IPv4 (15 chars) ou IPv6 (45 chars) -->
             </column>
-            <column name="user_agent" type="VARCHAR(500)">
-                <constraints nullable="true"/>
-            </column>
-
-            <!-- Quando aconteceu (sempre em hora de Luanda) -->
             <column name="criado_em" type="TIMESTAMP WITH TIME ZONE"
                      defaultValueComputed="NOW()">
                 <constraints nullable="false"/>
             </column>
         </createTable>
-
-        <!-- Índices para pesquisas rápidas na auditoria -->
-        <createIndex tableName="auditoria_log"
-                     schemaName="auditoria"
-                     indexName="idx_audit_utilizador">
-            <column name="utilizador_id"/>
-        </createIndex>
 
         <createIndex tableName="auditoria_log"
                      schemaName="auditoria"
@@ -191,35 +119,6 @@
 
         <rollback>
             <dropTable tableName="auditoria_log" schemaName="auditoria"/>
-        </rollback>
-    </changeSet>
-
-
-    <!-- ================================================ -->
-    <!-- CHANGESET 3: Comentários nas tabelas do sistema  -->
-    <!-- ================================================ -->
-    <changeSet id="001-03-comentarios" author="hospitalaо">
-        <comment>
-            Adicionar comentários às tabelas e colunas.
-            Boa prática: qualquer DBA ou programador que
-            aceda directamente à BD percebe o propósito
-            de cada tabela sem precisar de ler código.
-        </comment>
-
-        <sql>
-            COMMENT ON SCHEMA public IS
-                'Schema principal do sistema HospitalAO — Angola';
-
-            COMMENT ON SCHEMA auditoria IS
-                'Registo de auditoria: histórico de alterações a dados clínicos e financeiros';
-
-            COMMENT ON TABLE auditoria.auditoria_log IS
-                'Log de auditoria: regista todas as alterações a dados sensíveis do sistema';
-        </sql>
-
-        <rollback>
-            <!-- Comentários não têm rollback significativo -->
-            <sql>SELECT 1;</sql>
         </rollback>
     </changeSet>
 

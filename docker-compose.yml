@@ -1,78 +1,48 @@
 # ============================================================
 # HospitalAO — docker-compose.yml (Desenvolvimento)
 # ============================================================
-#
-# Como usar:
-#   Iniciar tudo:          docker compose up -d
-#   Ver logs:              docker compose logs -f
-#   Parar tudo:            docker compose down
-#   Parar e apagar dados:  docker compose down -v
-#
-# Pré-requisito: copiar .env.example para .env e preencher
-# ============================================================
 
 services:
 
-  # ------------------------------------------------------------
-  # POSTGRES — Base de dados principal
-  # Guarda: pacientes, consultas, faturas, utilizadores, etc.
-  # ------------------------------------------------------------
   postgres:
     image: postgres:16-alpine
-    # "alpine" = versão mínima da imagem, ocupa menos espaço
-    container_name: hospitalaо-postgres
+    container_name: hospitalao-postgres
     restart: unless-stopped
-    # "unless-stopped" = reinicia automaticamente se cair,
-    # mas não reinicia se tu parares manualmente
     environment:
       POSTGRES_DB: ${DB_NAME}
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
-      # PGDATA define onde dentro do container os dados ficam guardados
       PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
-      # Volume nomeado: os dados do Postgres ficam persistentes
-      # mesmo que o container seja apagado e recriado
       - postgres_data:/var/lib/postgresql/data
-      # Script SQL que corre automaticamente na PRIMEIRA inicialização
-      # (cria extensões como uuid-ossp, define timezone de Luanda, etc.)
       - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
     ports:
-      # Expor a porta 5432 para poderes ligar com DBeaver ou pgAdmin
-      # do teu computador durante o desenvolvimento
       - "5432:5432"
     networks:
-      - hospitalaо-network
+      - hospitalao-network
     healthcheck:
-      # Docker vai verificar se o Postgres está realmente pronto
-      # antes de permitir que o backend arranque
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
-      interval: 10s   # verificar a cada 10 segundos
-      timeout: 5s     # esperar 5 segundos pela resposta
-      retries: 5      # tentar 5 vezes antes de marcar como falha
-      start_period: 20s # dar 20 segundos ao Postgres para arrancar
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
 
 
-  # ------------------------------------------------------------
-  # REDIS — Cache e sessões
-  # Guarda: tokens JWT (blacklist de logout), cache de dados
-  # ------------------------------------------------------------
   redis:
     image: redis:7-alpine
-    container_name: hospitalaо-redis
+    container_name: hospitalao-redis
     restart: unless-stopped
     command: >
       redis-server
       --requirepass ${REDIS_PASSWORD}
       --save 60 1
       --loglevel warning
-    # "--save 60 1" = guardar em disco a cada 60s se houve 1 mudança
     volumes:
       - redis_data:/data
     ports:
       - "6379:6379"
     networks:
-      - hospitalaо-network
+      - hospitalao-network
     healthcheck:
       test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
       interval: 10s
@@ -80,16 +50,10 @@ services:
       retries: 5
 
 
-  # ------------------------------------------------------------
-  # MINIO — Armazenamento de ficheiros (compatível com S3 Amazon)
-  # Guarda: PDFs de faturas, fotos de pacientes, exames
-  # ------------------------------------------------------------
   minio:
     image: minio/minio:latest
-    container_name: hospitalaо-minio
+    container_name: hospitalao-minio
     restart: unless-stopped
-    # "server /data" = servir o armazenamento na pasta /data
-    # "--console-address :9001" = painel web de gestão na porta 9001
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
@@ -97,10 +61,10 @@ services:
     volumes:
       - minio_data:/data
     ports:
-      - "9000:9000"   # API para upload/download de ficheiros
-      - "9001:9001"   # Painel web de gestão (só em dev)
+      - "9000:9000"
+      - "9001:9001"
     networks:
-      - hospitalaо-network
+      - hospitalao-network
     healthcheck:
       test: ["CMD", "mc", "ready", "local"]
       interval: 30s
@@ -108,13 +72,9 @@ services:
       retries: 3
 
 
-  # ------------------------------------------------------------
-  # MINIO INIT — Cria os "baldes" (buckets) automaticamente
-  # Corre uma vez logo após o MinIO arrancar e depois fecha
-  # ------------------------------------------------------------
   minio-init:
     image: minio/mc:latest
-    container_name: hospitalaо-minio-init
+    container_name: hospitalao-minio-init
     depends_on:
       minio:
         condition: service_healthy
@@ -129,32 +89,25 @@ services:
         echo 'Buckets MinIO criados com sucesso.';
       "
     networks:
-      - hospitalaо-network
+      - hospitalao-network
 
 
-  # ------------------------------------------------------------
-  # RABBITMQ — Mensagens assíncronas entre módulos
-  # Exemplo: quando uma fatura é gerada, notifica o módulo
-  # financeiro sem o backend ter de esperar pela resposta
-  # ------------------------------------------------------------
   rabbitmq:
     image: rabbitmq:3-management-alpine
-    # "management" = inclui o painel web de gestão
-    container_name: hospitalaо-rabbitmq
+    container_name: hospitalao-rabbitmq
     restart: unless-stopped
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
-      RABBITMQ_DEFAULT_VHOST: /hospitalaо
-      # "vhost" = espaço isolado dentro do RabbitMQ para o nosso projecto
+      RABBITMQ_DEFAULT_VHOST: /hospitalao
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
       - ./infra/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
     ports:
-      - "5672:5672"    # Porta de mensagens (usada pelo backend)
-      - "15672:15672"  # Painel web de gestão (só em dev)
+      - "5672:5672"
+      - "15672:15672"
     networks:
-      - hospitalaо-network
+      - hospitalao-network
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 30s
@@ -162,140 +115,96 @@ services:
       retries: 5
 
 
-  # ------------------------------------------------------------
-  # BACKEND — API Spring Boot
-  # O "cérebro" do sistema: processa as regras de negócio,
-  # fala com a BD, gera faturas, etc.
-  # ------------------------------------------------------------
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
-      # Usar o stage "development" do Dockerfile multi-stage
-      # que tem hot-reload: alteras o código Java e o servidor
-      # reinicia automaticamente sem precisar de rebuild
       target: development
-    container_name: hospitalaо-backend
+    container_name: hospitalao-backend
     restart: unless-stopped
     environment:
       SPRING_PROFILES_ACTIVE: dev
-      # Ligação à base de dados
-      # Nota: usamos "postgres" (nome do serviço) em vez de
-      # "localhost" porque dentro da rede Docker os containers
-      # comunicam pelo nome do serviço
       DB_HOST: postgres
       DB_PORT: 5432
       DB_NAME: ${DB_NAME}
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
-      # Redis
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD}
-      # MinIO
       MINIO_ENDPOINT: http://minio:9000
       MINIO_ACCESS_KEY: ${MINIO_ROOT_USER}
       MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
-      # RabbitMQ
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_PORT: 5672
       RABBITMQ_USER: ${RABBITMQ_USER}
       RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
-      RABBITMQ_VHOST: /hospitalaо
-      # JWT
+      RABBITMQ_VHOST: /hospitalao
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS}
       JWT_REFRESH_EXPIRATION_MS: ${JWT_REFRESH_EXPIRATION_MS}
-      # Dados do Hospital (para faturação AGT)
       HOSPITAL_NOME: ${HOSPITAL_NOME}
       HOSPITAL_NIF: ${HOSPITAL_NIF}
     volumes:
-      # Montar o código fonte dentro do container
-      # Quando alteras um ficheiro .java no teu PC,
-      # o Spring DevTools detecta e reinicia automaticamente
-      - ./backend:/workspace
-      # Volume separado para cache do Maven (dependências Java)
-      # Evita re-descarregar dependências a cada rebuild
+      # Apenas o cache Maven — sem montar o código fonte
+      # O código é compilado dentro da imagem no build
       - maven_cache:/root/.m2
     ports:
-      - "8080:8080"  # API REST
-      - "5005:5005"  # Debug remoto Java (para ligar o debugger do IntelliJ/VS Code)
+      - "8080:8080"
     depends_on:
       postgres:
-        condition: service_healthy   # Só arranca depois do Postgres estar pronto
+        condition: service_healthy
       redis:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
     networks:
-      - hospitalaо-network
+      - hospitalao-network
 
 
-  # ------------------------------------------------------------
-  # FRONTEND — Angular
-  # A interface visual que os utilizadores do hospital vêem
-  # ------------------------------------------------------------
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
       target: development
-    container_name: hospitalaо-frontend
+    container_name: hospitalao-frontend
     restart: unless-stopped
     volumes:
       - ./frontend:/app
-      # Volume separado para node_modules — melhora muito a performance
-      # (evita que o Docker sincronize 300MB de node_modules a cada mudança)
       - node_modules:/app/node_modules
     ports:
       - "4200:4200"
     depends_on:
       - backend
     networks:
-      - hospitalaо-network
+      - hospitalao-network
 
 
-  # ------------------------------------------------------------
-  # NGINX — Reverse proxy
-  # O "porteiro" que recebe todos os pedidos na porta 80
-  # e decide para onde os enviar
-  # ------------------------------------------------------------
   nginx:
     image: nginx:alpine
-    container_name: hospitalaо-nginx
+    container_name: hospitalao-nginx
     restart: unless-stopped
     volumes:
       - ./infra/nginx/nginx.dev.conf:/etc/nginx/nginx.conf:ro
     ports:
-      - "80:80"
+      - "8090:80"
     depends_on:
       - backend
       - frontend
     networks:
-      - hospitalaо-network
+      - hospitalao-network
 
 
-# ============================================================
-# VOLUMES — Dados persistentes
-# ============================================================
-# Volumes nomeados: os dados sobrevivem ao "docker compose down"
-# Só são apagados com "docker compose down -v"
 volumes:
-  postgres_data:    # dados da base de dados
-  redis_data:       # dados do Redis
-  minio_data:       # ficheiros armazenados (PDFs, fotos, etc.)
-  rabbitmq_data:    # filas de mensagens
-  maven_cache:      # cache de dependências Maven (acelera builds)
-  node_modules:     # dependências npm do Angular
+  postgres_data:
+  redis_data:
+  minio_data:
+  rabbitmq_data:
+  maven_cache:
+  node_modules:
 
 
-# ============================================================
-# REDES — Comunicação entre containers
-# ============================================================
 networks:
-  hospitalaо-network:
+  hospitalao-network:
     driver: bridge
-    name: hospitalaо-network
-    # "bridge" = rede virtual isolada
-    # Os containers só conseguem comunicar entre si se estiverem
-    # na mesma rede. O exterior só acede pelas portas expostas.
+    name: hospitalao-network

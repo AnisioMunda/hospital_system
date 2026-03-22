@@ -1,14 +1,14 @@
 {
   "vhosts": [
     {
-      "name": "/hospitalaо"
+      "name": "/hospitalao"
     }
   ],
 
   "exchanges": [
     {
-      "name": "hospitalaо.eventos",
-      "vhost": "/hospitalaо",
+      "name": "hospitalao.eventos",
+      "vhost": "/hospitalao",
       "type": "topic",
       "durable": true,
       "auto_delete": false,
@@ -20,47 +20,47 @@
   "queues": [
     {
       "name": "fila.faturacao",
-      "vhost": "/hospitalaо",
+      "vhost": "/hospitalao",
       "durable": true,
       "auto_delete": false,
       "arguments": {
         "x-message-ttl": 86400000,
-        "x-dead-letter-exchange": "hospitalaо.mortas"
+        "x-dead-letter-exchange": "hospitalao.mortas"
       }
     },
     {
       "name": "fila.notificacoes",
-      "vhost": "/hospitalaо",
+      "vhost": "/hospitalao",
       "durable": true,
       "auto_delete": false,
       "arguments": {
         "x-message-ttl": 86400000,
-        "x-dead-letter-exchange": "hospitalaо.mortas"
+        "x-dead-letter-exchange": "hospitalao.mortas"
       }
     },
     {
       "name": "fila.farmacia",
-      "vhost": "/hospitalaо",
+      "vhost": "/hospitalao",
       "durable": true,
       "auto_delete": false,
       "arguments": {
         "x-message-ttl": 86400000,
-        "x-dead-letter-exchange": "hospitalaо.mortas"
+        "x-dead-letter-exchange": "hospitalao.mortas"
       }
     },
     {
       "name": "fila.laboratorio",
-      "vhost": "/hospitalaо",
+      "vhost": "/hospitalao",
       "durable": true,
       "auto_delete": false,
       "arguments": {
         "x-message-ttl": 86400000,
-        "x-dead-letter-exchange": "hospitalaо.mortas"
+        "x-dead-letter-exchange": "hospitalao.mortas"
       }
     },
     {
       "name": "fila.mortas",
-      "vhost": "/hospitalaо",
+      "vhost": "/hospitalao",
       "durable": true,
       "auto_delete": false,
       "arguments": {}
@@ -69,32 +69,32 @@
 
   "bindings": [
     {
-      "source": "hospitalaо.eventos",
-      "vhost": "/hospitalaо",
+      "source": "hospitalao.eventos",
+      "vhost": "/hospitalao",
       "destination": "fila.faturacao",
       "destination_type": "queue",
       "routing_key": "faturacao.#",
       "arguments": {}
     },
     {
-      "source": "hospitalaо.eventos",
-      "vhost": "/hospitalaо",
+      "source": "hospitalao.eventos",
+      "vhost": "/hospitalao",
       "destination": "fila.notificacoes",
       "destination_type": "queue",
       "routing_key": "notificacao.#",
       "arguments": {}
     },
     {
-      "source": "hospitalaо.eventos",
-      "vhost": "/hospitalaо",
+      "source": "hospitalao.eventos",
+      "vhost": "/hospitalao",
       "destination": "fila.farmacia",
       "destination_type": "queue",
       "routing_key": "farmacia.#",
       "arguments": {}
     },
     {
-      "source": "hospitalaо.eventos",
-      "vhost": "/hospitalaо",
+      "source": "hospitalao.eventos",
+      "vhost": "/hospitalao",
       "destination": "fila.laboratorio",
       "destination_type": "queue",
       "routing_key": "laboratorio.#",

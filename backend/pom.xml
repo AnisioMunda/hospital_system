@@ -6,13 +6,6 @@
 
     <modelVersion>4.0.0</modelVersion>
 
-    <!--
-        Spring Boot Parent: herda configurações base,
-        versões compatíveis de todas as dependências
-        e plugins Maven pré-configurados.
-        Assim não precisamos definir versão de cada biblioteca
-        individualmente — o parent garante compatibilidade.
-    -->
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
@@ -20,86 +13,44 @@
         <relativePath/>
     </parent>
 
-    <!-- Identificação do projecto -->
-    <groupId>ao.hospitalaо</groupId>
-    <artifactId>hospitalaо-backend</artifactId>
+    <!-- IMPORTANTE: groupId e artifactId apenas com caracteres ASCII -->
+    <groupId>ao.hospitalao</groupId>
+    <artifactId>hospitalao-backend</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>HospitalAO Backend</name>
-    <description>Sistema de Gestão Hospitalar para Angola</description>
+    <description>Sistema de Gestao Hospitalar</description>
 
     <properties>
-        <!-- Java 21: versão LTS mais recente com Virtual Threads -->
         <java.version>21</java.version>
-
-        <!-- Versões das bibliotecas não geridas pelo Spring parent -->
         <mapstruct.version>1.5.5.Final</mapstruct.version>
         <lombok.version>1.18.32</lombok.version>
         <jjwt.version>0.12.5</jjwt.version>
-        <minio.version>8.5.9</minio.version>
-        <itext.version>8.0.3</itext.version>
-        <zxing.version>3.5.3</zxing.version>
-        <testcontainers.version>1.19.7</testcontainers.version>
     </properties>
 
     <dependencies>
 
-        <!-- ============================================== -->
-        <!-- WEB — Criar endpoints REST da API              -->
-        <!-- ============================================== -->
-
-        <!--
-            spring-boot-starter-web:
-            Inclui o Tomcat embutido e tudo o que precisas
-            para criar controllers REST (@RestController,
-            @GetMapping, @PostMapping, etc.)
-        -->
+        <!-- WEB -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
 
-        <!--
-            spring-boot-starter-validation:
-            Validação de dados nos DTOs com anotações simples.
-            Ex: @NotBlank, @Email, @Size(min=8) nos campos
-            do formulário de registo de paciente.
-        -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
 
-        <!--
-            spring-boot-starter-websocket:
-            Comunicação em tempo real com o frontend.
-            Usado para: actualizar a fila de espera em tempo
-            real sem o browser ter de perguntar repetidamente.
-        -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-websocket</artifactId>
         </dependency>
 
-
-        <!-- ============================================== -->
-        <!-- SEGURANÇA — Autenticação e autorização         -->
-        <!-- ============================================== -->
-
-        <!--
-            spring-boot-starter-security:
-            Protege todos os endpoints automaticamente.
-            Integra com JWT para validar tokens em cada pedido.
-        -->
+        <!-- SEGURANCA -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>
         </dependency>
 
-        <!--
-            jjwt: biblioteca para criar e validar tokens JWT.
-            Dividida em 3 partes: api (interface), impl
-            (implementação, só em runtime) e jackson (serialização).
-        -->
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-api</artifactId>
@@ -118,155 +69,41 @@
             <scope>runtime</scope>
         </dependency>
 
-
-        <!-- ============================================== -->
-        <!-- BASE DE DADOS — Persistência de dados          -->
-        <!-- ============================================== -->
-
-        <!--
-            spring-boot-starter-data-jpa:
-            ORM (Object-Relational Mapping) para trabalhar
-            com a base de dados usando classes Java em vez
-            de SQL puro. Inclui o Hibernate.
-            Ex: salvar um Paciente é só pacienteRepository.save(paciente)
-        -->
+        <!-- BASE DE DADOS -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-jpa</artifactId>
         </dependency>
 
-        <!--
-            Driver JDBC do PostgreSQL:
-            Permite ao Java comunicar com o PostgreSQL.
-            "runtime" = só necessário quando a app está a correr,
-            não para compilar.
-        -->
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
             <scope>runtime</scope>
         </dependency>
 
-        <!--
-            Liquibase:
-            Gere as migrations da base de dados.
-            Em vez de alterar as tabelas manualmente,
-            criamos ficheiros SQL versionados que o Liquibase
-            aplica automaticamente ao arrancar a aplicação.
-        -->
         <dependency>
             <groupId>org.liquibase</groupId>
             <artifactId>liquibase-core</artifactId>
         </dependency>
 
-
-        <!-- ============================================== -->
-        <!-- REDIS — Cache e sessões                        -->
-        <!-- ============================================== -->
-
-        <!--
-            spring-boot-starter-data-redis:
-            Integração com Redis via Lettuce (cliente async).
-            Usado para: blacklist de JWT, cache de dados.
-        -->
+        <!-- REDIS -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-redis</artifactId>
         </dependency>
 
-        <!--
-            spring-session-data-redis:
-            Guarda sessões de utilizador no Redis em vez
-            de na memória do servidor. Permite que múltiplas
-            instâncias do backend partilhem sessões.
-        -->
         <dependency>
             <groupId>org.springframework.session</groupId>
             <artifactId>spring-session-data-redis</artifactId>
         </dependency>
 
-
-        <!-- ============================================== -->
-        <!-- RABBITMQ — Mensagens assíncronas               -->
-        <!-- ============================================== -->
-
-        <!--
-            spring-boot-starter-amqp:
-            AMQP = Advanced Message Queuing Protocol (protocolo do RabbitMQ).
-            Usado para publicar e consumir mensagens nas filas
-            que configurámos no definitions.json.
-        -->
+        <!-- RABBITMQ -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-amqp</artifactId>
         </dependency>
 
-
-        <!-- ============================================== -->
-        <!-- MINIO — Armazenamento de ficheiros             -->
-        <!-- ============================================== -->
-
-        <!--
-            Cliente oficial do MinIO para Java.
-            Permite fazer upload/download de ficheiros,
-            gerar URLs pré-assinadas para acesso temporário, etc.
-        -->
-        <dependency>
-            <groupId>io.minio</groupId>
-            <artifactId>minio</artifactId>
-            <version>${minio.version}</version>
-        </dependency>
-
-
-        <!-- ============================================== -->
-        <!-- PDFs e FATURAÇÃO AGT                           -->
-        <!-- ============================================== -->
-
-        <!--
-            iText Core:
-            Biblioteca para gerar PDFs em Java.
-            Usada para: faturas electrónicas AGT, receitas
-            médicas, resultados de exames, relatórios.
-            "pom" = importar o grupo completo de módulos iText.
-        -->
-        <dependency>
-            <groupId>com.itextpdf</groupId>
-            <artifactId>itext-core</artifactId>
-            <version>${itext.version}</version>
-            <type>pom</type>
-        </dependency>
-
-        <!--
-            ZXing (Zebra Crossing):
-            Biblioteca para gerar QR Codes.
-            Obrigatório nas faturas electrónicas AGT —
-            o QR Code contém o hash de validação da fatura.
-            "core" = lógica de geração, "javase" = renderização.
-        -->
-        <dependency>
-            <groupId>com.google.zxing</groupId>
-            <artifactId>core</artifactId>
-            <version>${zxing.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.google.zxing</groupId>
-            <artifactId>javase</artifactId>
-            <version>${zxing.version}</version>
-        </dependency>
-
-
-        <!-- ============================================== -->
-        <!-- UTILITÁRIOS — Produtividade de código          -->
-        <!-- ============================================== -->
-
-        <!--
-            Lombok:
-            Elimina código repetitivo (boilerplate) em Java.
-            Com @Data numa classe, gera automaticamente:
-            getters, setters, equals, hashCode, toString.
-            Com @Builder, gera o padrão Builder.
-            "optional=true" = não incluído na imagem final.
-        -->
+        <!-- UTILITARIOS -->
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
@@ -274,13 +111,6 @@
             <optional>true</optional>
         </dependency>
 
-        <!--
-            MapStruct:
-            Converte automaticamente entre entidades JPA e DTOs.
-            Ex: converter Paciente (entidade BD) para PacienteDTO
-            (o que enviamos ao frontend) sem escrever código manual.
-            Gera o código de conversão em tempo de compilação.
-        -->
         <dependency>
             <groupId>org.mapstruct</groupId>
             <artifactId>mapstruct</artifactId>
@@ -293,74 +123,20 @@
             <optional>true</optional>
         </dependency>
 
-        <!--
-            Email:
-            Para enviar notificações por email (alta do paciente,
-            resultado de exame disponível, fatura emitida).
-        -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-mail</artifactId>
-        </dependency>
-
-
-        <!-- ============================================== -->
-        <!-- MONITORIZAÇÃO                                  -->
-        <!-- ============================================== -->
-
-        <!--
-            Actuator:
-            Endpoints automáticos de health check e métricas.
-            Ex: GET /actuator/health diz se a app está OK.
-            Usado pelo Docker para saber se o container está saudável.
-        -->
+        <!-- MONITORIZACAO -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
 
-        <!--
-            Prometheus:
-            Exporta métricas no formato que o Prometheus lê.
-            Usado no Sprint 10 para dashboards de monitorização
-            no Grafana (latência, erros, uso de memória, etc.)
-        -->
-        <dependency>
-            <groupId>io.micrometer</groupId>
-            <artifactId>micrometer-registry-prometheus</artifactId>
-            <scope>runtime</scope>
-        </dependency>
-
-
-        <!-- ============================================== -->
-        <!-- DOCUMENTAÇÃO DA API                            -->
-        <!-- ============================================== -->
-
-        <!--
-            SpringDoc OpenAPI (Swagger UI):
-            Gera automaticamente documentação interactiva da API.
-            Acedida em: http://localhost:8080/api/swagger-ui.html
-            Permite testar os endpoints directamente no browser
-            sem precisar do Postman.
-        -->
+        <!-- DOCUMENTACAO -->
         <dependency>
             <groupId>org.springdoc</groupId>
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
             <version>2.5.0</version>
         </dependency>
 
-
-        <!-- ============================================== -->
-        <!-- DEV TOOLS — Só em desenvolvimento              -->
-        <!-- ============================================== -->
-
-        <!--
-            Spring DevTools:
-            Hot-reload automático: ao alterar código Java,
-            o servidor reinicia automaticamente sem precisar
-            de parar e iniciar manualmente.
-            "optional=true" = não incluído na imagem de produção.
-        -->
+        <!-- DEV TOOLS -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-devtools</artifactId>
@@ -368,48 +144,16 @@
             <optional>true</optional>
         </dependency>
 
-
-        <!-- ============================================== -->
-        <!-- TESTES                                         -->
-        <!-- ============================================== -->
-
-        <!--
-            spring-boot-starter-test:
-            Inclui JUnit 5, Mockito e AssertJ.
-            Base para todos os testes unitários e de integração.
-        -->
+        <!-- TESTES -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
 
-        <!--
-            spring-security-test:
-            Utilitários para testar endpoints protegidos.
-            Ex: simular um utilizador logado nos testes.
-        -->
         <dependency>
             <groupId>org.springframework.security</groupId>
             <artifactId>spring-security-test</artifactId>
-            <scope>test</scope>
-        </dependency>
-
-        <!--
-            TestContainers:
-            Nos testes de integração, levanta um PostgreSQL
-            REAL dentro de um container Docker temporário.
-            Muito mais fiável do que simular a base de dados.
-            O container arranca antes dos testes e fecha no fim.
-        -->
-        <dependency>
-            <groupId>org.testcontainers</groupId>
-            <artifactId>junit-jupiter</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.testcontainers</groupId>
-            <artifactId>postgresql</artifactId>
             <scope>test</scope>
         </dependency>
 
@@ -417,39 +161,22 @@
 
     <build>
         <plugins>
-
-            <!--
-                Spring Boot Maven Plugin:
-                Empacota a aplicação num JAR executável
-                (fat JAR com todas as dependências incluídas).
-                Configura layers para builds Docker optimizados.
-            -->
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
-                    <!-- Excluir Lombok do JAR final (só é usado em compilação) -->
                     <excludes>
                         <exclude>
                             <groupId>org.projectlombok</groupId>
                             <artifactId>lombok</artifactId>
                         </exclude>
                     </excludes>
-                    <!-- Layers: para o Dockerfile multi-stage funcionar correctamente -->
                     <layers>
                         <enabled>true</enabled>
                     </layers>
                 </configuration>
             </plugin>
 
-            <!--
-                Maven Compiler Plugin:
-                Configura o compilador Java 21 e os processadores
-                de anotações do Lombok e MapStruct.
-                IMPORTANTE: a ordem dos processors importa —
-                Lombok deve vir antes do MapStruct porque o
-                MapStruct usa os métodos gerados pelo Lombok.
-            -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
@@ -470,7 +197,6 @@
                     </annotationProcessorPaths>
                 </configuration>
             </plugin>
-
         </plugins>
     </build>
 
