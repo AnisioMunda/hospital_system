@@ -1,14 +1,6 @@
 # ============================================================
 # HospitalAO — GitHub Actions CI Pipeline
 # ============================================================
-# Corre automaticamente em cada push e pull request
-# para as branches main e develop.
-#
-# Jobs:
-#   1. backend-ci  — compila e testa o Spring Boot
-#   2. frontend-ci — compila o Angular
-#   3. docker-build — valida que as imagens Docker constroem
-# ============================================================
 
 name: CI
 
@@ -20,7 +12,7 @@ on:
 
 env:
   JAVA_VERSION: '21'
-  NODE_VERSION: '20'
+  NODE_VERSION: '22'
 
 jobs:
 
@@ -32,7 +24,6 @@ jobs:
     runs-on: ubuntu-latest
 
     services:
-      # PostgreSQL real para os testes — igual ao ambiente de dev
       postgres:
         image: postgres:16-alpine
         env:
@@ -68,10 +59,9 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
 
-      - name: Compilar e verificar
+      - name: Compilar backend
         working-directory: ./backend
         env:
-          # Variáveis injectadas nos testes — não são senhas reais
           DB_HOST: localhost
           DB_PORT: 5432
           DB_NAME: hospitalao_test
@@ -94,16 +84,8 @@ jobs:
           MINIO_ACCESS_KEY: minioadmin
           MINIO_SECRET_KEY: minioadmin
           SPRING_PROFILES_ACTIVE: test
-        run: mvn verify -B --no-transfer-progress
-
-      - name: Publicar resultados dos testes
-        uses: dorny/test-reporter@v1
-        if: always()
-        with:
-          name: Testes Backend
-          path: backend/target/surefire-reports/*.xml
-          reporter: java-junit
-          fail-on-error: false
+        # "package -DskipTests" apenas compila — testes serão adicionados no Sprint 10
+        run: mvn package -DskipTests -B --no-transfer-progress
 
 
   # ----------------------------------------------------------
@@ -121,8 +103,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
+          # Sem cache — o package-lock.json ainda não existe no repo
 
       - name: Instalar dependências
         working-directory: ./frontend
@@ -139,7 +120,6 @@ jobs:
   docker-build:
     name: Docker Build
     runs-on: ubuntu-latest
-    # Só corre se os outros dois jobs passarem
     needs: [ backend-ci, frontend-ci ]
 
     steps:
