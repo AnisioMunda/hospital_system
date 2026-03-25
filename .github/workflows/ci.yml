@@ -16,9 +16,6 @@ env:
 
 jobs:
 
-  # ----------------------------------------------------------
-  # Job 1: Backend Spring Boot
-  # ----------------------------------------------------------
   backend-ci:
     name: Backend (Spring Boot)
     runs-on: ubuntu-latest
@@ -87,9 +84,6 @@ jobs:
         run: mvn package -DskipTests -B --no-transfer-progress
 
 
-  # ----------------------------------------------------------
-  # Job 2: Frontend Angular
-  # ----------------------------------------------------------
   frontend-ci:
     name: Frontend (Angular)
     runs-on: ubuntu-latest
@@ -107,19 +101,26 @@ jobs:
         working-directory: ./frontend
         run: npm install
 
-      - name: Verificar Angular CLI instalado
+      - name: Compilar Angular (com log de erros visível)
         working-directory: ./frontend
-        run: ./node_modules/.bin/ng version
+        # Continuar mesmo com erro para mostrar o log
+        run: ./node_modules/.bin/ng build --configuration production || true
 
-      - name: Compilar Angular
+      - name: Mostrar log de erros Angular
         working-directory: ./frontend
-        # Usar o Angular CLI local instalado pelo npm install
+        run: |
+          echo "=== Procurar ficheiros de log ==="
+          find /tmp -name "angular-errors.log" 2>/dev/null
+          echo "=== Conteúdo do log ==="
+          find /tmp -name "angular-errors.log" -exec cat {} \; 2>/dev/null || echo "Nenhum log encontrado"
+          echo "=== Resultado do build ==="
+          ls -la dist/ 2>/dev/null || echo "Pasta dist não criada"
+
+      - name: Falhar se o build falhou
+        working-directory: ./frontend
         run: ./node_modules/.bin/ng build --configuration production
 
 
-  # ----------------------------------------------------------
-  # Job 3: Validar builds Docker
-  # ----------------------------------------------------------
   docker-build:
     name: Docker Build
     runs-on: ubuntu-latest
@@ -138,8 +139,6 @@ jobs:
           context: ./backend
           target: development
           push: false
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
           tags: hospitalao-backend:ci
 
       - name: Validar build do Frontend
@@ -148,6 +147,4 @@ jobs:
           context: ./frontend
           target: development
           push: false
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
           tags: hospitalao-frontend:ci
