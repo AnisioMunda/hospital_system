@@ -84,7 +84,6 @@ jobs:
           MINIO_ACCESS_KEY: minioadmin
           MINIO_SECRET_KEY: minioadmin
           SPRING_PROFILES_ACTIVE: test
-        # "package -DskipTests" apenas compila — testes serão adicionados no Sprint 10
         run: mvn package -DskipTests -B --no-transfer-progress
 
 
@@ -103,15 +102,16 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          # Sem cache — o package-lock.json ainda não existe no repo
 
       - name: Instalar dependências
         working-directory: ./frontend
         run: npm install
 
-      - name: Compilar Angular (produção)
+      - name: Compilar Angular
         working-directory: ./frontend
-        run: npm run build:prod
+        # Usar "npx ng build" directamente em vez de "npm run build:prod"
+        # para não depender de scripts definidos no package.json
+        run: npx ng build --configuration production
 
 
   # ----------------------------------------------------------
