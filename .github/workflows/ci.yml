@@ -107,11 +107,14 @@ jobs:
         working-directory: ./frontend
         run: npm install
 
+      - name: Verificar Angular CLI instalado
+        working-directory: ./frontend
+        run: ./node_modules/.bin/ng version
+
       - name: Compilar Angular
         working-directory: ./frontend
-        # Usar "npx ng build" directamente em vez de "npm run build:prod"
-        # para não depender de scripts definidos no package.json
-        run: npx ng build --configuration production
+        # Usar o Angular CLI local instalado pelo npm install
+        run: ./node_modules/.bin/ng build --configuration production
 
 
   # ----------------------------------------------------------
