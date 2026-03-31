@@ -1,0 +1,395 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+    http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <!-- ================================================ -->
+    <!-- CHANGESET 1: Tabela de perfis (roles)             -->
+    <!-- ================================================ -->
+    <!--
+        Criamos os perfis ANTES dos utilizadores porque a
+        tabela user_roles vai referenciar esta tabela.
+        No Liquibase, a ordem dos changesets é a ordem
+        em que as tabelas são criadas na BD.
+    -->
+    <changeSet id="002-01-criar-tabela-roles" author="hospitalao">
+
+        <createTable tableName="roles">
+            <!--
+                UUID como chave primária — mais seguro que inteiros.
+                uuid_generate_v4() gera um UUID aleatório automaticamente.
+                A extensão uuid-ossp foi instalada pelo init.sql.
+            -->
+            <column name="id" type="UUID" defaultValueComputed="uuid_generate_v4()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+
+            <!--
+                Nome do perfil em maiúsculas — convenção do sistema.
+                Ex: ADMIN, MEDICO, ENFERMEIRO, RECEPCAO, FARMACIA, FINANCEIRO
+                UNIQUE garante que não há dois perfis com o mesmo nome.
+            -->
+            <column name="nome" type="VARCHAR(50)">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uq_roles_nome"/>
+            </column>
+
+            <column name="descricao" type="VARCHAR(255)">
+                <constraints nullable="true"/>
+            </column>
+
+            <!-- Soft delete — nunca apagamos perfis, apenas desactivamos -->
+            <column name="activo" type="BOOLEAN" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="criado_em" type="TIMESTAMP WITH TIME ZONE"
+                     defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <rollback>
+            <dropTable tableName="roles"/>
+        </rollback>
+    </changeSet>
+
+
+    <!-- ================================================ -->
+    <!-- CHANGESET 2: Tabela de permissões                -->
+    <!-- ================================================ -->
+    <changeSet id="002-02-criar-tabela-permissions" author="hospitalao">
+
+        <createTable tableName="permissions">
+            <column name="id" type="UUID" defaultValueComputed="uuid_generate_v4()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+
+            <!--
+                Nome da permissão no formato RECURSO_ACCAO.
+                Ex: PACIENTE_VER, PACIENTE_CRIAR, CONSULTA_VER,
+                    FATURA_EMITIR, STOCK_GERIR, RELATORIO_VER
+            -->
+            <column name="nome" type="VARCHAR(100)">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uq_permissions_nome"/>
+            </column>
+
+            <column name="descricao" type="VARCHAR(255)">
+                <constraints nullable="true"/>
+            </column>
+
+            <column name="criado_em" type="TIMESTAMP WITH TIME ZONE"
+                     defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <rollback>
+            <dropTable tableName="permissions"/>
+        </rollback>
+    </changeSet>
+
+
+    <!-- ================================================ -->
+    <!-- CHANGESET 3: Tabela de utilizadores              -->
+    <!-- ================================================ -->
+    <changeSet id="002-03-criar-tabela-users" author="hospitalao">
+
+        <createTable tableName="users">
+            <column name="id" type="UUID" defaultValueComputed="uuid_generate_v4()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+
+            <!-- Nome completo do funcionário -->
+            <column name="nome_completo" type="VARCHAR(200)">
+                <constraints nullable="false"/>
+            </column>
+
+            <!--
+                Username para login — único no sistema.
+                Ex: dr.silva, enf.maria, recepcao.joao
+            -->
+            <column name="username" type="VARCHAR(100)">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uq_users_username"/>
+            </column>
+
+            <!--
+                Password guardada como hash BCrypt — NUNCA em texto simples.
+                O Spring Security trata da encriptação automaticamente.
+                VARCHAR(255) porque o hash BCrypt tem 60 caracteres.
+            -->
+            <column name="password_hash" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="email" type="VARCHAR(200)">
+                <constraints nullable="true" unique="true" uniqueConstraintName="uq_users_email"/>
+            </column>
+
+            <column name="telefone" type="VARCHAR(20)">
+                <constraints nullable="true"/>
+            </column>
+
+            <!--
+                Especialidade médica (preenchida apenas para médicos).
+                Ex: Cardiologia, Pediatria, Medicina Geral
+            -->
+            <column name="especialidade" type="VARCHAR(100)">
+                <constraints nullable="true"/>
+            </column>
+
+            <!-- Número de cédula profissional (médicos e enfermeiros) -->
+            <column name="numero_cedula" type="VARCHAR(50)">
+                <constraints nullable="true"/>
+            </column>
+
+            <!--
+                Estado do utilizador.
+                ACTIVO = pode entrar no sistema
+                INACTIVO = conta desactivada (ex: funcionário saiu)
+                SUSPENSO = bloqueado temporariamente
+            -->
+            <column name="estado" type="estado_registo_enum" defaultValue="ACTIVO">
+                <constraints nullable="false"/>
+            </column>
+
+            <!-- Forçar mudança de password no primeiro login -->
+            <column name="deve_mudar_password" type="BOOLEAN" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+
+            <!-- Data do último login — útil para detectar contas abandonadas -->
+            <column name="ultimo_login" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="true"/>
+            </column>
+
+            <column name="criado_em" type="TIMESTAMP WITH TIME ZONE"
+                     defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="atualizado_em" type="TIMESTAMP WITH TIME ZONE"
+                     defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <!-- Índice para pesquisa rápida por username (usado em cada login) -->
+        <createIndex tableName="users" indexName="idx_users_username">
+            <column name="username"/>
+        </createIndex>
+
+        <!-- Índice para pesquisa por estado (listar utilizadores activos) -->
+        <createIndex tableName="users" indexName="idx_users_estado">
+            <column name="estado"/>
+        </createIndex>
+
+        <rollback>
+            <dropTable tableName="users"/>
+        </rollback>
+    </changeSet>
+
+
+    <!-- ================================================ -->
+    <!-- CHANGESET 4: Tabela de ligação user_roles        -->
+    <!-- ================================================ -->
+    <!--
+        Esta tabela implementa a relação N:N entre users e roles.
+        Um utilizador pode ter vários perfis.
+        Um perfil pode ser atribuído a vários utilizadores.
+
+        Exemplo:
+          user_id: uuid-do-dr-silva  | role_id: uuid-do-role-MEDICO
+          user_id: uuid-do-dr-silva  | role_id: uuid-do-role-GESTOR
+    -->
+    <changeSet id="002-04-criar-tabela-user-roles" author="hospitalao">
+
+        <createTable tableName="user_roles">
+            <column name="user_id" type="UUID">
+                <constraints nullable="false"
+                             foreignKeyName="fk_user_roles_user"
+                             references="users(id)"
+                             deleteCascade="true"/>
+            </column>
+            <column name="role_id" type="UUID">
+                <constraints nullable="false"
+                             foreignKeyName="fk_user_roles_role"
+                             references="roles(id)"
+                             deleteCascade="true"/>
+            </column>
+            <column name="atribuido_em" type="TIMESTAMP WITH TIME ZONE"
+                     defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <!-- Chave primária composta: um utilizador não pode ter o mesmo perfil duas vezes -->
+        <addPrimaryKey tableName="user_roles"
+                       columnNames="user_id, role_id"
+                       constraintName="pk_user_roles"/>
+
+        <rollback>
+            <dropTable tableName="user_roles"/>
+        </rollback>
+    </changeSet>
+
+
+    <!-- ================================================ -->
+    <!-- CHANGESET 5: Tabela de ligação role_permissions  -->
+    <!-- ================================================ -->
+    <changeSet id="002-05-criar-tabela-role-permissions" author="hospitalao">
+
+        <createTable tableName="role_permissions">
+            <column name="role_id" type="UUID">
+                <constraints nullable="false"
+                             foreignKeyName="fk_role_permissions_role"
+                             references="roles(id)"
+                             deleteCascade="true"/>
+            </column>
+            <column name="permission_id" type="UUID">
+                <constraints nullable="false"
+                             foreignKeyName="fk_role_permissions_permission"
+                             references="permissions(id)"
+                             deleteCascade="true"/>
+            </column>
+        </createTable>
+
+        <addPrimaryKey tableName="role_permissions"
+                       columnNames="role_id, permission_id"
+                       constraintName="pk_role_permissions"/>
+
+        <rollback>
+            <dropTable tableName="role_permissions"/>
+        </rollback>
+    </changeSet>
+
+
+    <!-- ================================================ -->
+    <!-- CHANGESET 6: Dados iniciais — perfis do sistema  -->
+    <!-- ================================================ -->
+    <!--
+        Inserir os perfis base do HospitalAO.
+        Estes perfis são criados automaticamente — o administrador
+        não precisa de os criar manualmente.
+
+        Os UUIDs são fixos (não aleatórios) para que os dados
+        iniciais sejam consistentes em qualquer ambiente.
+    -->
+    <changeSet id="002-06-inserir-roles-base" author="hospitalao">
+
+        <insert tableName="roles">
+            <column name="id" value="00000000-0000-0000-0000-000000000001"/>
+            <column name="nome" value="ADMIN"/>
+            <column name="descricao" value="Administrador do sistema — acesso total"/>
+            <column name="activo" valueBoolean="true"/>
+        </insert>
+
+        <insert tableName="roles">
+            <column name="id" value="00000000-0000-0000-0000-000000000002"/>
+            <column name="nome" value="MEDICO"/>
+            <column name="descricao" value="Médico — consultas, prescrições, diagnósticos"/>
+            <column name="activo" valueBoolean="true"/>
+        </insert>
+
+        <insert tableName="roles">
+            <column name="id" value="00000000-0000-0000-0000-000000000003"/>
+            <column name="nome" value="ENFERMEIRO"/>
+            <column name="descricao" value="Enfermeiro — triagem, internamento, evolução"/>
+            <column name="activo" valueBoolean="true"/>
+        </insert>
+
+        <insert tableName="roles">
+            <column name="id" value="00000000-0000-0000-0000-000000000004"/>
+            <column name="nome" value="RECEPCAO"/>
+            <column name="descricao" value="Recepcionista — admissão, agendamento, filas"/>
+            <column name="activo" valueBoolean="true"/>
+        </insert>
+
+        <insert tableName="roles">
+            <column name="id" value="00000000-0000-0000-0000-000000000005"/>
+            <column name="nome" value="FARMACIA"/>
+            <column name="descricao" value="Farmacêutico — dispensação e stock de medicamentos"/>
+            <column name="activo" valueBoolean="true"/>
+        </insert>
+
+        <insert tableName="roles">
+            <column name="id" value="00000000-0000-0000-0000-000000000006"/>
+            <column name="nome" value="FINANCEIRO"/>
+            <column name="descricao" value="Financeiro — faturação, pagamentos, relatórios"/>
+            <column name="activo" valueBoolean="true"/>
+        </insert>
+
+        <insert tableName="roles">
+            <column name="id" value="00000000-0000-0000-0000-000000000007"/>
+            <column name="nome" value="GESTOR"/>
+            <column name="descricao" value="Gestor — dashboards e relatórios (só leitura)"/>
+            <column name="activo" valueBoolean="true"/>
+        </insert>
+
+        <insert tableName="roles">
+            <column name="id" value="00000000-0000-0000-0000-000000000008"/>
+            <column name="nome" value="LABORATORIO"/>
+            <column name="descricao" value="Laboratório — exames e resultados"/>
+            <column name="activo" valueBoolean="true"/>
+        </insert>
+
+        <rollback>
+            <delete tableName="roles">
+                <where>id IN (
+                    '00000000-0000-0000-0000-000000000001',
+                    '00000000-0000-0000-0000-000000000002',
+                    '00000000-0000-0000-0000-000000000003',
+                    '00000000-0000-0000-0000-000000000004',
+                    '00000000-0000-0000-0000-000000000005',
+                    '00000000-0000-0000-0000-000000000006',
+                    '00000000-0000-0000-0000-000000000007',
+                    '00000000-0000-0000-0000-000000000008'
+                )</where>
+            </delete>
+        </rollback>
+    </changeSet>
+
+
+    <!-- ================================================ -->
+    <!-- CHANGESET 7: Utilizador admin inicial            -->
+    <!-- ================================================ -->
+    <!--
+        Criar o primeiro utilizador administrador.
+        Password: Admin@2024 (hash BCrypt)
+        O administrador deve mudar a password no primeiro login.
+
+        COMO GERAR UM HASH BCrypt:
+        Em Java: new BCryptPasswordEncoder().encode("Admin@2024")
+        Online: https://bcrypt-generator.com (apenas em dev!)
+    -->
+    <changeSet id="002-07-inserir-admin-inicial" author="hospitalao">
+
+        <insert tableName="users">
+            <column name="id" value="00000000-0000-0000-0000-000000000099"/>
+            <column name="nome_completo" value="Administrador do Sistema"/>
+            <column name="username" value="admin"/>
+            <!-- Hash BCrypt de "Admin@2024" -->
+            <column name="password_hash" value="$2a$12$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy"/>
+            <column name="email" value="admin@hospitalao.ao"/>
+            <column name="estado" value="ACTIVO"/>
+            <column name="deve_mudar_password" valueBoolean="true"/>
+        </insert>
+
+        <!-- Atribuir o perfil ADMIN ao utilizador admin -->
+        <insert tableName="user_roles">
+            <column name="user_id" value="00000000-0000-0000-0000-000000000099"/>
+            <column name="role_id" value="00000000-0000-0000-0000-000000000001"/>
+        </insert>
+
+        <rollback>
+            <delete tableName="user_roles">
+                <where>user_id = '00000000-0000-0000-0000-000000000099'</where>
+            </delete>
+            <delete tableName="users">
+                <where>id = '00000000-0000-0000-0000-000000000099'</where>
+            </delete>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

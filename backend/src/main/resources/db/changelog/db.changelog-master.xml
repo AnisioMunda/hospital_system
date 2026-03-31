@@ -5,19 +5,10 @@
     xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
     http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
 
-    <!--
-        HospitalAO — Liquibase Changelog Master
-        =========================================
-        Lista todos os migrations por ordem de aplicação.
-        O Liquibase lê este ficheiro ao arrancar e aplica
-        os changesets que ainda não foram aplicados.
-
-        REGRA IMPORTANTE:
-          Nunca alterar um changeset já aplicado em produção.
-          Se precisas de corrigir algo, cria um NOVO changeset.
-    -->
-
-    <!-- Sprint 1 - Fundações -->
+    <!-- Sprint 0 - Fundações -->
     <include file="db/changelog/sprint-01/001-schema-base.xml"/>
+
+    <!-- Sprint 1 - Autenticação e Utilizadores -->
+    <include file="db/changelog/sprint-01/002-criar-tabela-users.xml"/>
 
 </databaseChangeLog>
